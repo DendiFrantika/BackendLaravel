@@ -15,8 +15,8 @@ Route::get('/', function () {
 });
 
 // Mirror of API auth/routes for web consumers (if you prefer web routes)
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+//Route::post('/login', [AuthController::class, 'login']);
+//Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
