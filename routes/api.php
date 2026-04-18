@@ -10,80 +10,113 @@ use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LaporanController;
 use Illuminate\Support\Facades\Route;
 
-// Public Routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    // Auth Routes
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::put('/profile', [AuthController::class, 'updateProfile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+/*
+|--------------------------------------------------------------------------
+| PROTECTED ROUTES
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware('auth:sanctum')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUTH
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('auth')->group(function () {
-        Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
-    // ADMIN ROUTES
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('role:admin')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'admin']);
-        Route::get('/dashboard/statistik-pasien', [DashboardController::class, 'statistikPasien']);
-        Route::get('/dashboard/statistik-dokter', [DashboardController::class, 'statistikDokter']);
-        Route::get('/dashboard/statistik-pendaftaran', [DashboardController::class, 'statistikPendaftaran']);
-        Route::get('/dashboard/pendaftaran-terbaru', [DashboardController::class, 'pendaftaranTerbaru']);
-        Route::get('/dashboard/aktivitas-hari-ini', [DashboardController::class, 'aktivitasHariIni']);
 
-        Route::apiResource('/dokter', DokterController::class);
-        Route::get('/dokter/spesialisasi/{spesialisasi}', [DokterController::class, 'getBySpesialisasi']);
+        Route::prefix('admin')->group(function () {
 
-        Route::apiResource('/jadwal', JadwalController::class);
-        Route::get('/jadwal/dokter/{dokter_id}', [JadwalController::class, 'getByDokter']);
+            // Dashboard
+            Route::get('/dashboard', [DashboardController::class, 'admin']);
 
-        Route::apiResource('/pasien', PasienController::class);
+            // Dokter
+            Route::apiResource('/dokter', DokterController::class);
 
         Route::post('/pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
         Route::get('/pendaftaran/pasien/{pasien_id}', [PendaftaranController::class, 'getByPasien']);
         Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
 
-        Route::get('/laporan', [LaporanController::class, 'laporanPasien']);
-        Route::get('/laporan/pasien', [LaporanController::class, 'laporanPasien']);
-        Route::get('/laporan/rekam-medis', [LaporanController::class, 'laporanRekamMedis']);
-        Route::get('/laporan/dokter', [LaporanController::class, 'laporanDokter']);
-        Route::get('/laporan/pendaftaran', [LaporanController::class, 'laporanPendaftaran']);
-        Route::post('/laporan/export-pdf', [LaporanController::class, 'exportPDF']);
-        Route::post('/laporan/export-excel', [LaporanController::class, 'exportExcel']);
+            // Jadwal
+            Route::apiResource('/jadwal', JadwalController::class);
+
+            // Pasien
+            Route::apiResource('/pasien', PasienController::class);
+
+            // Pendaftaran
+            Route::apiResource('/pendaftaran', PendaftaranController::class);
+
+            // Laporan
+            Route::get('/laporan/pasien', [LaporanController::class, 'laporanPasien']);
+        });
     });
 
-    // PASIEN ROUTES
-    Route::middleware('role:pasien')->group(function () {
-        Route::get('/dashboard-pasien', [DashboardController::class, 'pasien']);
-        Route::post('/daftar-berobat', [PendaftaranController::class, 'store']);
-        Route::get('/riwayat', [PendaftaranController::class, 'riwayat']);
+    /*
+    |--------------------------------------------------------------------------
+    | PASIEN (INI YANG KAMU BUTUH)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('role:pasien')->prefix('pasien')->group(function () {
+
+        // 🔥 PROFIL (INI FIX UTAMA KAMU)
+        Route::get('/profile', [PasienController::class, 'profile']);
+        Route::put('/profile', [PasienController::class, 'update']);
+
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'pasien']);
+
+        // Pendaftaran
+        Route::post('/daftar', [PendaftaranController::class, 'store']);
+
+        // Riwayat (rename biar konsisten)
+        Route::get('/appointments', [PendaftaranController::class, 'riwayat']);
+
+        // Antrian
         Route::get('/antrian', [PendaftaranController::class, 'antrian']);
     });
 
-    // ADMIN / DOKTER REKAM MEDIS ROUTES
+    /*
+    |--------------------------------------------------------------------------
+    | DOKTER
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('role:dokter')->prefix('dokter')->group(function () {
+
+        Route::get('/dashboard', [DashboardController::class, 'overview']);
+
+        Route::get('/pasien', [PendaftaranController::class, 'getByDokter']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN & DOKTER
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('role:admin,dokter')->group(function () {
         Route::apiResource('/rekam-medis', RekamMedisController::class);
-        Route::get('/rekam-medis/pasien/{pasien_id}', [RekamMedisController::class, 'getByPasien']);
-        Route::get('/rekam-medis/dokter/{dokter_id}', [RekamMedisController::class, 'getByDokter']);
     });
 
-    // DOKTER ROUTES
-    Route::middleware('role:dokter')->group(function () {
-        Route::get('/dashboard-dokter', [DashboardController::class, 'overview']);
-        Route::get('/pasien-saya', [PendaftaranController::class, 'getByDokter']);
-    });
 });
-
-
-
