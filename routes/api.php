@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Route;
 // Public Routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-Route::get('/dokter/spesialisasi', [DokterController::class, 'getSpesialisasi']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -51,7 +50,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('/pasien', PasienController::class);
 
-        Route::apiResource('/pendaftaran', PendaftaranController::class);
         Route::post('/pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
         Route::get('/pendaftaran/pasien/{pasien_id}', [PendaftaranController::class, 'getByPasien']);
         Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
