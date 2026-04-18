@@ -50,4 +50,9 @@ class Pendaftaran extends Model
     {
         return $this->hasMany(Notifikasi::class);
     }
+
+    public function transaksis()
+    {
+        return $this->hasMany(Transaksi::class);
+    }
 }

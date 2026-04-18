@@ -80,6 +80,11 @@ class JadwalController extends Controller
             ->where('status', true)
             ->get();
 
+        // Fallback agar dropdown jadwal tetap terisi bila data lama status-nya belum diset.
+        if ($jadwals->isEmpty()) {
+            $jadwals = JadwalDokter::where('dokter_id', $dokter_id)->get();
+        }
+
         return response()->json([
             'data' => $jadwals,
         ], 200);

@@ -17,7 +17,18 @@ class RoleMiddleware {
         ], 401);
     }
 
-    if (!in_array($user->role, $roles)) {
+    $parsedRoles = [];
+    foreach ($roles as $role) {
+        if (str_contains($role, ',')) {
+            $parsedRoles = array_merge($parsedRoles, explode(',', $role));
+        } else {
+            $parsedRoles[] = $role;
+        }
+    }
+
+    $parsedRoles = array_values(array_filter(array_map('trim', $parsedRoles)));
+
+    if (!in_array($user->role, $parsedRoles, true)) {
         return response()->json([
             'message' => 'Forbidden - You do not have permission'
         ], 403);

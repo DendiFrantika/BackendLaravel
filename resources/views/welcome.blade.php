@@ -35,21 +35,21 @@
                             href="{{ route('login') }}"
                             class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] border border-transparent hover:border-[#19140035] dark:hover:border-[#3E3E3A] rounded-sm text-sm leading-normal"
                         >
-                            Log in
+                            Masuk
                         </a>
 
                         @if (Route::has('register'))
                             <a
                                 href="{{ route('register') }}"
                                 class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] border-[#19140035] hover:border-[#1915014a] border text-[#1b1b18] dark:border-[#3E3E3A] dark:hover:border-[#62605b] rounded-sm text-sm leading-normal">
-                                Register
+                                Daftar
                             </a>
                         @endif
                     @endauth
                 </nav>
             @endif
         </header>
-        <div class="flex items-center justify-center w-full transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0">
+        <div class="flex flex-col items-center justify-center w-full transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0">
             <main class="flex max-w-[335px] w-full flex-col-reverse lg:max-w-4xl lg:flex-row">
                 <div class="text-[13px] leading-[20px] flex-1 p-6 pb-12 lg:p-20 bg-white dark:bg-[#161615] dark:text-[#EDEDEC] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d] rounded-bl-lg rounded-br-lg lg:rounded-tl-lg lg:rounded-br-none">
                     <h1 class="mb-1 font-medium">Let's get started</h1>
@@ -268,6 +268,49 @@
                     <div class="absolute inset-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]"></div>
                 </div>
             </main>
+
+            @php
+                $mapsShare = config('services.google_maps.share_url');
+                $mapsEmbed = config('services.google_maps.embed_url');
+                if (! $mapsEmbed && $mapsShare) {
+                    $mapsEmbed = 'https://www.google.com/maps?q=' . rawurlencode($mapsShare) . '&output=embed';
+                }
+            @endphp
+            @if ($mapsEmbed && $mapsShare)
+                <section class="mt-10 w-full max-w-[335px] px-0 lg:max-w-4xl" aria-labelledby="landing-map-heading">
+                    <div class="rounded-lg border border-[#e3e3e0] bg-white p-5 shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:border-[#3E3E3A] dark:bg-[#161615] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d] sm:p-6">
+                        <h2 id="landing-map-heading" class="text-base font-medium text-[#1b1b18] dark:text-[#EDEDEC]">
+                            Lokasi kami
+                        </h2>
+                        <p class="mt-1 text-[13px] leading-[20px] text-[#706f6c] dark:text-[#A1A09A]">
+                            Lihat lokasi pada peta di bawah atau buka langsung di Google Maps.
+                        </p>
+                        <div class="relative mt-4 aspect-[16/10] w-full overflow-hidden rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A]">
+                            <iframe
+                                title="Peta lokasi di Google Maps"
+                                class="absolute inset-0 h-full w-full border-0"
+                                src="{{ $mapsEmbed }}"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                allowfullscreen
+                            ></iframe>
+                        </div>
+                        <p class="mt-3 text-center text-[13px] leading-[20px]">
+                            <a
+                                href="{{ $mapsShare }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex items-center gap-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
+                            >
+                                Buka di Google Maps
+                                <svg width="10" height="11" viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 shrink-0" aria-hidden="true">
+                                    <path d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001" stroke="currentColor" stroke-linecap="square" />
+                                </svg>
+                            </a>
+                        </p>
+                    </div>
+                </section>
+            @endif
         </div>
 
         @if (Route::has('login'))

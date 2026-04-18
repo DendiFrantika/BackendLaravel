@@ -8,6 +8,11 @@ use App\Http\Controllers\API\PendaftaranController;
 use App\Http\Controllers\API\RekamMedisController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LaporanController;
+use App\Http\Controllers\API\Kasir\LaporanKasirController;
+use App\Http\Controllers\API\Kasir\ObatController as KasirObatController;
+use App\Http\Controllers\API\Kasir\PendaftaranFlowController as KasirPendaftaranFlowController;
+use App\Http\Controllers\API\Kasir\TarifTindakanController as KasirTarifTindakanController;
+use App\Http\Controllers\API\Kasir\TransaksiController as KasirTransaksiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,8 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
+        Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/profile/photo', [AuthController::class, 'updatePhoto']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
@@ -56,9 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
             // Dokter
             Route::apiResource('/dokter', DokterController::class);
 
-        Route::post('/pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
-        Route::get('/pendaftaran/pasien/{pasien_id}', [PendaftaranController::class, 'getByPasien']);
-        Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
+            Route::post('/pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
+            Route::get('/pendaftaran/pasien/{pasien_id}', [PendaftaranController::class, 'getByPasien']);
+            Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
 
             // Jadwal
             Route::apiResource('/jadwal', JadwalController::class);
@@ -76,25 +83,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | PASIEN (INI YANG KAMU BUTUH)
+    | PASIEN (portal)
     |--------------------------------------------------------------------------
     */
     Route::middleware('role:pasien')->prefix('pasien')->group(function () {
 
-        // 🔥 PROFIL (INI FIX UTAMA KAMU)
         Route::get('/profile', [PasienController::class, 'profile']);
-        Route::put('/profile', [PasienController::class, 'update']);
+        Route::put('/profile', [PasienController::class, 'updateProfile']);
+        Route::post('/profile/photo', [PasienController::class, 'updatePhoto']);
 
-        // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'pasien']);
 
-        // Pendaftaran
+        Route::get('/dokters', [DokterController::class, 'indexForPasien']);
+        Route::get('/dokter/{dokter_id}/jadwal', [JadwalController::class, 'getByDokter']);
+
         Route::post('/daftar', [PendaftaranController::class, 'store']);
 
-        // Riwayat (rename biar konsisten)
         Route::get('/appointments', [PendaftaranController::class, 'riwayat']);
 
-        // Antrian
         Route::get('/antrian', [PendaftaranController::class, 'antrian']);
     });
 
@@ -117,6 +123,32 @@ Route::middleware('auth:sanctum')->group(function () {
     */
     Route::middleware('role:admin,dokter')->group(function () {
         Route::apiResource('/rekam-medis', RekamMedisController::class);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN & KASIR — operasional klinik (API backend saja, tanpa Blade)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('role:admin,kasir')->prefix('kasir')->group(function () {
+
+        Route::apiResource('obat', KasirObatController::class);
+        Route::apiResource('tarif-tindakan', KasirTarifTindakanController::class);
+
+        Route::get('pendaftaran/antrian-hari-ini', [KasirPendaftaranFlowController::class, 'antrianHariIni']);
+        Route::post('pendaftaran/{id}/check-in', [KasirPendaftaranFlowController::class, 'checkIn']);
+        Route::post('pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
+        Route::post('kunjungan-langsung', [KasirPendaftaranFlowController::class, 'kunjunganLangsung']);
+
+        Route::get('transaksi', [KasirTransaksiController::class, 'index']);
+        Route::post('transaksi', [KasirTransaksiController::class, 'store']);
+        Route::get('transaksi/{transaksi}', [KasirTransaksiController::class, 'show']);
+        Route::get('transaksi/{transaksi}/invoice', [KasirTransaksiController::class, 'invoice']);
+        Route::post('transaksi/{transaksi}/bayar', [KasirTransaksiController::class, 'bayar']);
+        Route::post('transaksi/{transaksi}/batal', [KasirTransaksiController::class, 'batal']);
+
+        Route::get('laporan/keuangan', [LaporanKasirController::class, 'keuangan']);
+        Route::get('laporan/operasional', [LaporanKasirController::class, 'operasional']);
     });
 
 });

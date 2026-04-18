@@ -8,6 +8,7 @@ use App\Models\Dokter;
 use App\Models\Pendaftaran;
 use App\Models\RekamMedis;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
@@ -159,9 +160,26 @@ class DashboardController extends Controller
         $totalKunjungan = RekamMedis::where('pasien_id', $pasien->id)->count();
 
         return response()->json([
-            'pasien' => $pasien,
+            'pasien' => array_merge($pasien->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
             'pendaftaranTerbaru' => $pendaftaranTerbaru,
             'totalKunjungan' => $totalKunjungan,
         ], 200);
+    }
+
+    private function photoUrlForUser(int $userId): ?string
+    {
+        $dir = public_path('assets/profile');
+        if (! File::isDirectory($dir)) {
+            return null;
+        }
+
+        $matches = File::glob($dir . DIRECTORY_SEPARATOR . 'user-' . $userId . '.*');
+        if (! $matches) {
+            return null;
+        }
+
+        return asset('assets/profile/' . basename($matches[0]));
     }
 }
