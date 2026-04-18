@@ -111,12 +111,34 @@ class DashboardController extends Controller
         $pendaftaranHariIni = Pendaftaran::whereDate('tanggal_pendaftaran', now())->count();
         $pendaftaranPending = Pendaftaran::where('status', 'pending')->count();
 
+        // Statistik Pasien
+        $pasienBaru = Pasien::whereDate('created_at', now())->count();
+        $pasienAktif = Pendaftaran::where('status', '!=', 'cancelled')
+            ->distinct()
+            ->count('pasien_id');
+
+        // Statistik Dokter
+        $dokterSeluruh = Dokter::count();
+        $spesialisasi = Dokter::select('spesialisasi', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('spesialisasi')
+            ->get();
+
         return response()->json([
             'totalPasien' => $totalPasien,
             'totalDokter' => $totalDokter,
             'totalPendaftaran' => $totalPendaftaran,
             'pendaftaranHariIni' => $pendaftaranHariIni,
             'pendaftaranPending' => $pendaftaranPending,
+            'statistikPasien' => [
+                'pasienBaruHariIni' => $pasienBaru,
+                'pasienAktif' => $pasienAktif,
+                'totalPasien' => $totalPasien,
+            ],
+            'statistikDokter' => [
+                'totalDokterSeluruh' => $dokterSeluruh,
+                'dokterAktif' => $totalDokter,
+                'spesialisasi' => $spesialisasi,
+            ]
         ], 200);
     }
 
