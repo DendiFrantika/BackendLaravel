@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Pasien;
 use App\Models\Dokter;
 use App\Models\JadwalDokter;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +16,7 @@ class DatabaseSeeder extends Seeder
         // =====================
         // ADMIN
         // =====================
+         $this->call(HospitalSeeder::class);
         User::updateOrCreate(
             ['email' => 'admin@rumahsakit.com'],
             [
