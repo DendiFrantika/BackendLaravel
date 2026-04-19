@@ -35,4 +35,20 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Maps (landing / embed)
+    |--------------------------------------------------------------------------
+    |
+    | share_url: Tautan bagikan dari Google Maps (mis. maps.app.goo.gl).
+    | embed_url: Opsional — tempel nilai "src" dari Bagikan → Sematkan peta
+    | jika iframe bawaan tidak memuat lokasi dengan benar.
+    |
+    */
+
+    'google_maps' => [
+        'share_url' => env('GOOGLE_MAPS_SHARE_URL', 'https://maps.app.goo.gl/msV48DCcYuh6V5Er5'),
+        'embed_url' => env('GOOGLE_MAPS_EMBED_URL'),
+    ],
+
 ];

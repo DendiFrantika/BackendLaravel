@@ -1,7 +1,5 @@
 <?php
 
-use Laravel\Sanctum\Sanctum;
-
 return [
 
     /*
@@ -15,13 +13,8 @@ return [
     |
     */
 
+    // Pakai Bearer token (bukan cookie SPA) → biarkan kosong supaya API tidak butuh CSRF.
     'stateful' => [],
-    // => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        //'%s%s',
-      //  'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-       // Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-   // ))),
 
     /*
     |--------------------------------------------------------------------------
@@ -48,7 +41,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => config('sanctum.expiration', 60),
 
     /*
     |--------------------------------------------------------------------------

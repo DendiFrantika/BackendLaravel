@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -17,7 +19,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:admin,dokter,pasien',
+            'role' => 'nullable|in:admin,dokter,pasien,kasir',
         ]);
 
         if ($validator->fails()) {
@@ -32,6 +34,11 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role ?? 'pasien',
         ]);
+
+        if ($request->hasSession()) {
+            Auth::guard('web')->login($user);
+            $request->session()->regenerate();
+        }
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -67,6 +74,11 @@ class AuthController extends Controller
         // hapus token lama (optional tapi disarankan)
         $user->tokens()->delete();
 
+        if ($request->hasSession()) {
+            Auth::guard('web')->login($user);
+            $request->session()->regenerate();
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -89,8 +101,12 @@ class AuthController extends Controller
 
     public function profile(Request $request)
     {
+        $user = $request->user();
+
         return response()->json([
-            'user' => $request->user(),
+            'user' => array_merge($user->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
         ], 200);
     }
 
@@ -113,15 +129,109 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'user' => $user,
+            'user' => array_merge($user->fresh()->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
+        ], 200);
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = $request->user();
+        $path = $this->storePhotoForUser($request, $user->id);
+
+        return response()->json([
+            'message' => 'Foto profile updated successfully',
+            'photo_url' => asset(str_replace(public_path() . DIRECTORY_SEPARATOR, '', $path)),
+            'user' => array_merge($user->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
         ], 200);
     }
 
 
     public function me(Request $request)
     {
+        $user = $request->user();
+
         return response()->json([
-            'user' => $request->user(),
+            'user' => array_merge($user->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
         ], 200);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password does not match'
+            ], 400);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully'
+        ], 200);
+    }
+
+    private function photoUrlForUser(int $userId): ?string
+    {
+        $dir = public_path('assets/profile');
+        if (! File::isDirectory($dir)) {
+            return null;
+        }
+
+        $matches = File::glob($dir . DIRECTORY_SEPARATOR . 'user-' . $userId . '.*');
+        if (! $matches) {
+            return null;
+        }
+
+        return asset('assets/profile/' . basename($matches[0]));
+    }
+
+    private function storePhotoForUser(Request $request, int $userId): string
+    {
+        $dir = public_path('assets/profile');
+        if (! File::isDirectory($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        foreach (File::glob($dir . DIRECTORY_SEPARATOR . 'user-' . $userId . '.*') ?: [] as $oldFile) {
+            File::delete($oldFile);
+        }
+
+        $extension = $request->file('photo')->getClientOriginalExtension();
+        $filename = 'user-' . $userId . '.' . strtolower($extension);
+
+        $request->file('photo')->move($dir, $filename);
+
+        return $dir . DIRECTORY_SEPARATOR . $filename;
     }
 }

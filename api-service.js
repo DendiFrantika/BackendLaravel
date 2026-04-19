@@ -13,9 +13,10 @@ class ApiService {
 
     // Helper method untuk headers dengan token
     getAuthHeaders() {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
         return {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             ...(token && { 'Authorization': `Bearer ${token}` })
         };
     }
@@ -62,11 +63,30 @@ class ApiService {
         return this.handleResponse(response);
     }
 
+    /**
+     * Master dokter (admin) — selaras DokterController::index + Blade admin/dokter.
+     * @param {Object} params search, status ('1'|'0'|true|false, omit jika semua), page, per_page (1–100)
+     */
+    async listAdminDokter(params = {}) {
+        return this.get('/admin/dokter', params);
+    }
+
+    /**
+     * Master pasien (admin) — selaras PasienController::index + Blade admin/pasien.
+     * @param {Object} params search, jenis_kelamin ('Laki-laki'|'Perempuan'), page, per_page (1–100)
+     */
+    async listAdminPasien(params = {}) {
+        return this.get('/admin/pasien', params);
+    }
+
     async handleResponse(response) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            const err = new Error(data.message || `HTTP error! status: ${response.status}`);
+            err.status = response.status;
+            err.data = data;
+            throw err;
         }
 
         return data;

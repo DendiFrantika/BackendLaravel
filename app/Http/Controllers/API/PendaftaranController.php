@@ -31,6 +31,16 @@ class PendaftaranController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = $request->user();
+        if ($user && $user->role === 'pasien') {
+            $pasien = Pasien::where('email', $user->email)->first();
+            if (! $pasien || (int) $request->pasien_id !== (int) $pasien->id) {
+                return response()->json([
+                    'message' => 'Anda hanya dapat mendaftar untuk akun pasien Anda sendiri.',
+                ], 403);
+            }
+        }
+
         $pendaftaran = Pendaftaran::create(array_merge($request->all(), [
             'status' => 'pending',
             'no_antrian' => $this->generateNoAntrian(),

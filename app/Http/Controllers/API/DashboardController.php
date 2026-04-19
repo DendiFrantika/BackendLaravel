@@ -8,6 +8,7 @@ use App\Models\Dokter;
 use App\Models\Pendaftaran;
 use App\Models\RekamMedis;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
@@ -111,12 +112,34 @@ class DashboardController extends Controller
         $pendaftaranHariIni = Pendaftaran::whereDate('tanggal_pendaftaran', now())->count();
         $pendaftaranPending = Pendaftaran::where('status', 'pending')->count();
 
+        // Statistik Pasien
+        $pasienBaru = Pasien::whereDate('created_at', now())->count();
+        $pasienAktif = Pendaftaran::where('status', '!=', 'cancelled')
+            ->distinct()
+            ->count('pasien_id');
+
+        // Statistik Dokter
+        $dokterSeluruh = Dokter::count();
+        $spesialisasi = Dokter::select('spesialisasi', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('spesialisasi')
+            ->get();
+
         return response()->json([
             'totalPasien' => $totalPasien,
             'totalDokter' => $totalDokter,
             'totalPendaftaran' => $totalPendaftaran,
             'pendaftaranHariIni' => $pendaftaranHariIni,
             'pendaftaranPending' => $pendaftaranPending,
+            'statistikPasien' => [
+                'pasienBaruHariIni' => $pasienBaru,
+                'pasienAktif' => $pasienAktif,
+                'totalPasien' => $totalPasien,
+            ],
+            'statistikDokter' => [
+                'totalDokterSeluruh' => $dokterSeluruh,
+                'dokterAktif' => $totalDokter,
+                'spesialisasi' => $spesialisasi,
+            ]
         ], 200);
     }
 
@@ -137,9 +160,26 @@ class DashboardController extends Controller
         $totalKunjungan = RekamMedis::where('pasien_id', $pasien->id)->count();
 
         return response()->json([
-            'pasien' => $pasien,
+            'pasien' => array_merge($pasien->toArray(), [
+                'photo_url' => $this->photoUrlForUser($user->id),
+            ]),
             'pendaftaranTerbaru' => $pendaftaranTerbaru,
             'totalKunjungan' => $totalKunjungan,
         ], 200);
+    }
+
+    private function photoUrlForUser(int $userId): ?string
+    {
+        $dir = public_path('assets/profile');
+        if (! File::isDirectory($dir)) {
+            return null;
+        }
+
+        $matches = File::glob($dir . DIRECTORY_SEPARATOR . 'user-' . $userId . '.*');
+        if (! $matches) {
+            return null;
+        }
+
+        return asset('assets/profile/' . basename($matches[0]));
     }
 }
