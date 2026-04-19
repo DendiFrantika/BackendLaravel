@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo; // Tambahkan ini
 
 class Pasien extends Model
 {
@@ -13,19 +12,35 @@ class Pasien extends Model
     protected $table = 'pasiens';
 
     protected $fillable = [
-        'user_id', 
-        'no_pendaftaran', 
-        'nama', 
-        'no_identitas', 
-        'tanggal_lahir', 
-        'email', 
-        'alamat', 
-        'no_telepon', 
-        'jenis_kelamin'
+        'no_pendaftaran',
+        'nama',
+        'no_identitas',
+        'jenis_kelamin',
+        'tanggal_lahir',
+        'alamat',
+        'no_telepon',
+        'email',
+        'status_pernikahan',
+        'pekerjaan',
+        'agama',
+        'berat_badan',
+        'tinggi_badan',
+        'golongan_darah',
+        'alergi',
+        'riwayat_penyakit',
     ];
 
-    public function user(): BelongsTo
+    protected $casts = [
+        'tanggal_lahir' => 'date',
+    ];
+
+    public function pendaftaran()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->hasMany(Pendaftaran::class);
+    }
+
+    public function rekamMedis()
+    {
+        return $this->hasMany(RekamMedis::class);
     }
 }

@@ -4,60 +4,53 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Pasien;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 
 class AuthController extends Controller
 {
+    //  REGISTER
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'no_identitas' => 'required|string|unique:pasiens,no_identitas',
-            'tanggal_lahir' => 'required|date',
+            'role' => 'nullable|in:admin,dokter,pasien,kasir',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        // 1. Create User
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'pasien',
+            'role' => $request->role ?? 'pasien',
         ]);
 
-        // 2. Create Pasien
-        $pasien = Pasien::create([
-            'user_id'       => $user->id,
-            'nama'          => $request->name,
-            'email'         => $request->email,
-            'no_identitas'  => $request->no_identitas,
-            'tanggal_lahir' => Carbon::parse($request->tanggal_lahir)->format('Y-m-d'),
-            'no_pendaftaran'=> 'TEMP-' . time(),
-        ]);
+        if ($request->hasSession()) {
+            Auth::guard('web')->login($user);
+            $request->session()->regenerate();
+        }
 
-        // 3. Update No Pendaftaran Final
-        $pasien->update([
-            'no_pendaftaran' => 'PSN-' . str_pad($pasien->id, 5, '0', STR_PAD_LEFT)
-        ]);
+        $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registrasi Berhasil',
-            'user' => $user->load('pasien'), // Memuat relasi pasien
-            'token' => $user->createToken('auth_token')->plainTextToken
+            'message' => 'User registered successfully',
+            'user' => $user,
+            'token' => $token,
         ], 201);
     }
 
+    // LOGIN (FIX TANPA SESSION)
     public function login(Request $request)
-<<<<<<< HEAD
 {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email',
@@ -237,24 +230,3 @@ class AuthController extends Controller
         return $dir . DIRECTORY_SEPARATOR . $filename;
     }
 }
-=======
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Kredensial tidak valid'], 401);
-        }
-
-        return response()->json([
-            'message' => 'Login Berhasil',
-            'user' => $user->load('pasien'),
-            'token' => $user->createToken('auth_token')->plainTextToken
-        ], 200);
-    }
-}
->>>>>>> 1b323f4 (fix: relasi table pasein)
