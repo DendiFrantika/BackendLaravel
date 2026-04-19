@@ -51,43 +51,38 @@ class AuthController extends Controller
 
     // LOGIN (FIX TANPA SESSION)
     public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Invalid credentials',
-            ], 401);
-        }
-
-        // hapus token lama (optional tapi disarankan)
-        $user->tokens()->delete();
-
-        if ($request->hasSession()) {
-            Auth::guard('web')->login($user);
-            $request->session()->regenerate();
-        }
-
-        $token = $user->createToken('api-token')->plainTextToken;
-
+    if ($validator->fails()) {
         return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
-            'token' => $token,
-        ], 200);
+            'errors' => $validator->errors()
+        ], 422);
     }
 
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return response()->json([
+            'message' => 'Email atau password salah',
+        ], 401);
+    }
+
+    // hapus token lama
+    $user->tokens()->delete();
+
+    // buat token baru
+    $token = $user->createToken('api-token')->plainTextToken;
+
+    return response()->json([
+        'message' => 'Login berhasil',
+        'user' => $user,
+        'token' => $token,
+    ]);
+}
 
     public function logout(Request $request)
     {
