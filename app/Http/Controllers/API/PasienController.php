@@ -41,29 +41,33 @@ class PasienController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'no_pendaftaran' => 'required|string|max:100|unique:pasiens,no_pendaftaran',
-            'nama' => 'required|string|max:255',
-            'no_identitas' => 'required|string|max:255|unique:pasiens,no_identitas',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'tanggal_lahir' => 'required|date|before_or_equal:today',
-            'alamat' => 'required|string|max:2000',
-            'no_telepon' => 'required|string|max:50',
-            'email' => 'nullable|email|max:255',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'nama'          => 'required|string|max:255',
+        'no_identitas'  => 'required|string|max:255|unique:pasiens,no_identitas',
+        'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+        'tanggal_lahir' => 'required|date|before_or_equal:today',
+        'alamat'        => 'required|string|max:2000',
+        'no_telepon'    => 'required|string|max:50',
+        'email'         => 'nullable|email|max:255',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $pasien = Pasien::create($validator->validated());
-
-        return response()->json([
-            'message' => 'Pasien created successfully',
-            'data' => $pasien,
-        ], 201);
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+
+    // Generate no_pendaftaran otomatis
+    $noPendaftaran = 'REG-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+
+    $pasien = Pasien::create(array_merge($validator->validated(), [
+        'no_pendaftaran' => $noPendaftaran,
+    ]));
+
+    return response()->json([
+        'message' => 'Pasien created successfully',
+        'data'    => $pasien,
+    ], 201);
+}
 
     public function show(Pasien $pasien)
     {
