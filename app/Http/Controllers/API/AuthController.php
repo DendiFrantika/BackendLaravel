@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Pasien;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -20,6 +21,11 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'nullable|in:admin,dokter,pasien,kasir',
+            'no_identitas' => 'required_if:role,pasien|string|unique:pasiens,no_identitas',
+            'tanggal_lahir' => 'required_if:role,pasien|date',
+            'alamat' => 'nullable|string',
+            'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
+            'no_telepon' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -34,6 +40,20 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role ?? 'pasien',
         ]);
+
+        // Jika role adalah pasien, buat data di tabel pasiens
+        if ($user->role === 'pasien') {
+            Pasien::create([
+                'no_pendaftaran' => 'P' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'nama' => $request->name,
+                'no_identitas' => $request->no_identitas,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'alamat' => $request->alamat,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'no_telepon' => $request->no_telepon,
+                'email' => $request->email,
+            ]);
+        }
 
         if ($request->hasSession()) {
             Auth::guard('web')->login($user);

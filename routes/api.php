@@ -86,6 +86,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/laporan/keuangan', [LaporanKasirController::class, 'keuangan']);
         Route::get('/laporan/operasional', [LaporanKasirController::class, 'operasional']);
+
+        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::put('/admin/update-profile', [AdminSettingsController::class, 'updateProfile']);
+    Route::put('/admin/update-password', [AdminSettingsController::class, 'updatePassword']);
+});
     });
 
     /*
