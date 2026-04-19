@@ -17,13 +17,28 @@ use App\Http\Controllers\API\Kasir\LaporanKasirController;
 
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| AUTH (PUBLIC)
+|--------------------------------------------------------------------------
+*/
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
 });
 
+/*
+|--------------------------------------------------------------------------
+| PROTECTED (LOGIN REQUIRED)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | AUTH USER
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [AuthController::class, 'profile']);
@@ -33,6 +48,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('role:admin')->prefix('admin')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'admin']);
@@ -68,6 +88,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/laporan/operasional', [LaporanKasirController::class, 'operasional']);
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | PASIEN
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('role:pasien')->prefix('pasien')->group(function () {
 
         Route::get('/profile', [PasienController::class, 'profile']);
@@ -79,11 +104,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dokters', [DokterController::class, 'indexForPasien']);
         Route::get('/dokter/{dokter_id}/jadwal', [JadwalController::class, 'getByDokter']);
 
+        // PENDAFTARAN
         Route::post('/daftar', [PendaftaranController::class, 'store']);
+
+        // 🔥 INI YANG DIPERBAIKI
         Route::get('/appointments', [PendaftaranController::class, 'riwayat']);
+        Route::get('/history', [PendaftaranController::class, 'riwayat']); // alias
+
         Route::get('/antrian', [PendaftaranController::class, 'antrian']);
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | DOKTER
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('role:dokter')->prefix('dokter')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'overview']);
