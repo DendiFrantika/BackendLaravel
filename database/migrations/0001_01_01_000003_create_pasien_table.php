@@ -10,14 +10,21 @@ return new class extends Migration
     {
         Schema::create('pasiens', function (Blueprint $table) {
             $table->id();
+            
+            // 1. Tambahkan Relasi ke tabel users
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+            
             $table->string('no_pendaftaran')->unique();
             $table->string('nama');
             $table->string('no_identitas')->unique();
-            $table->enum('jenis_kelamin', ['Laki-laki', 'Perempuan']);
-            $table->date('tanggal_lahir');
-            $table->text('alamat');
-            $table->string('no_telepon');
             $table->string('email')->nullable();
+            $table->date('tanggal_lahir');
+
+            // 2. Tambahkan ->nullable() agar registrasi awal tidak error
+            $table->enum('jenis_kelamin', ['Laki-laki', 'Perempuan'])->nullable();
+            $table->text('alamat')->nullable();
+            $table->string('no_telepon')->nullable();
+            
             $table->string('status_pernikahan')->nullable();
             $table->string('pekerjaan')->nullable();
             $table->string('agama')->nullable();
