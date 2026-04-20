@@ -54,6 +54,7 @@ class PasienController extends Controller
             'alamat'          => 'nullable|string|max:2000',
             'email'           => 'nullable|email|max:255|unique:pasiens,email',
             'no_pendaftaran'  => 'nullable|string|unique:pasiens,no_pendaftaran',
+            'golongan_darah' => 'nullable|in:A,B,AB,O',
         ]);
 
     if ($validator->fails()) {
@@ -102,6 +103,7 @@ class PasienController extends Controller
             'no_telepon'      => 'sometimes|required|string|max:50',
             'alamat'          => 'sometimes|required|string|max:2000',
             'email'           => 'nullable|email|unique:pasiens,email,' . $pasien->id,
+            'golongan_darah'  => 'nullable|in:A,B,AB,O',
         ]);
 
         if ($validator->fails()) {

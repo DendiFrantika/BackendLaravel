@@ -8,6 +8,7 @@ use App\Http\Controllers\API\PendaftaranController;
 use App\Http\Controllers\API\RekamMedisController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LaporanController;
+use App\Http\Controllers\API\AnalyticsController;
 
 use App\Http\Controllers\API\Kasir\ObatController as KasirObatController;
 use App\Http\Controllers\API\Kasir\PendaftaranFlowController as KasirPendaftaranFlowController;
@@ -59,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/recent-activities',   [DashboardController::class, 'recentActivities']);
         Route::get('/chart-data',          [DashboardController::class, 'chartData']);
         Route::get('/aktivitas-hari-ini',  [DashboardController::class, 'aktivitasHariIni']);
+        Route::get('/analytics', [AnalyticsController::class, 'index']);
 
         Route::apiResource('/dokter', DokterController::class);
         Route::apiResource('/jadwal', JadwalController::class);
