@@ -177,4 +177,51 @@ class DokterController extends Controller
             'data' => $dokters,
         ], 200);
     }
+     public function getJadwalByLogin(Request $request)
+{
+    try {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // ⚠️ PENTING: sesuaikan mapping user ke dokter
+        // kalau user email = dokter email
+        $dokter = Dokter::where('email', $user->email)->first();
+
+        if (!$dokter) {
+            return response()->json([
+                'message' => 'Data dokter tidak ditemukan'
+            ], 404);
+        }
+
+        $jadwal = JadwalDokter::where('dokter_id', $dokter->id)
+            ->where('status', true)
+            ->get();
+
+        // fallback kalau tidak ada status true
+        if ($jadwal->isEmpty()) {
+            $jadwal = JadwalDokter::where('dokter_id', $dokter->id)->get();
+        }
+
+        return response()->json([
+            'dokter' => [
+                'id' => $dokter->id,
+                'nama' => $dokter->nama,
+                'spesialisasi' => $dokter->spesialisasi,
+                'no_telepon' => $dokter->no_telepon,
+                'email' => $dokter->email,
+            ],
+            'jadwal' => $jadwal
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }
