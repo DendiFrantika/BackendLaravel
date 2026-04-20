@@ -27,6 +27,27 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
 });
 
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES (Landing Page)
+|--------------------------------------------------------------------------
+*/
+// Rute ini bisa diakses siapa saja tanpa login
+Route::get('/public/dokters', [DokterController::class, 'indexForPasien']);
+
+/*
+|--------------------------------------------------------------------------
+| AUTH (PUBLIC)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+});
 /*
 |--------------------------------------------------------------------------
 | PROTECTED (LOGIN REQUIRED)
