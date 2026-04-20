@@ -27,6 +27,27 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
 });
 
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES (Landing Page)
+|--------------------------------------------------------------------------
+*/
+// Rute ini bisa diakses siapa saja tanpa login
+Route::get('/public/dokters', [DokterController::class, 'indexForPasien']);
+
+/*
+|--------------------------------------------------------------------------
+| AUTH (PUBLIC)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+});
 /*
 |--------------------------------------------------------------------------
 | PROTECTED (LOGIN REQUIRED)
@@ -35,9 +56,9 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     /*
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     | AUTH USER
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
@@ -49,15 +70,16 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     /*
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     | ADMIN
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     */
-    Route::middleware(['role:admin'])->get('/laporan/export/pdf', [LaporanController::class, 'exportPDF']);
-
     Route::middleware('role:admin')->prefix('admin')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'admin']);
+        Route::get('/recent-activities',   [DashboardController::class, 'recentActivities']);
+        Route::get('/chart-data',          [DashboardController::class, 'chartData']);
+        Route::get('/aktivitas-hari-ini',  [DashboardController::class, 'aktivitasHariIni']);
 
         Route::apiResource('/dokter', DokterController::class);
         Route::apiResource('/jadwal', JadwalController::class);
@@ -70,10 +92,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('/rekam-medis', RekamMedisController::class);
 
-        Route::get('/laporan/pasien', [LaporanController::class, 'laporanPasien']);
-        Route::get('/laporan/rekam-medis', [LaporanController::class, 'laporanRekamMedis']);
-        Route::get('/laporan/pendaftaran', [LaporanController::class, 'laporanPendaftaran']);
-        Route::get('/laporan/dokter', [LaporanController::class, 'laporanDokter']);
+        // Laporan — data
+        Route::get('/laporan/pasien',       [LaporanController::class, 'laporanPasien']);
+        Route::get('/laporan/rekam-medis',  [LaporanController::class, 'laporanRekamMedis']);
+        Route::get('/laporan/pendaftaran',  [LaporanController::class, 'laporanPendaftaran']);
+        Route::get('/laporan/dokter',       [LaporanController::class, 'laporanDokter']);
+
+        // Laporan — export PDF (dipindah ke sini agar prefix /admin konsisten)
+        Route::get('/laporan/export/pdf',              [LaporanController::class, 'exportPDF']);
+        Route::get('/laporan/rekam-medis/export/pdf',  [LaporanController::class, 'exportRekamMedisPDF']);
+        Route::get('/laporan/pendaftaran/export/pdf',  [LaporanController::class, 'exportPendaftaranPDF']);
+        Route::get('/laporan/dokter/export/pdf',       [LaporanController::class, 'exportDokterPDF']);
+        
+        // Laporan — export CSV (Excel)
+        Route::get('/laporan/export/csv',              [LaporanController::class, 'exportPasienCsv']);
+        Route::get('/laporan/rekam-medis/export/csv',  [LaporanController::class, 'exportRekamMedisCsv']);
+        Route::get('/laporan/pendaftaran/export/csv',  [LaporanController::class, 'exportPendaftaranCsv']);
+        Route::get('/laporan/dokter/export/csv',       [LaporanController::class, 'exportDokterCsv']);
+        
 
         Route::apiResource('/obat', KasirObatController::class);
         Route::apiResource('/tarif-tindakan', KasirTarifTindakanController::class);
@@ -89,14 +125,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transaksi/{transaksi}/bayar', [KasirTransaksiController::class, 'bayar']);
         Route::post('/transaksi/{transaksi}/batal', [KasirTransaksiController::class, 'batal']);
 
-        Route::get('/laporan/keuangan', [LaporanKasirController::class, 'keuangan']);
+        Route::get('/laporan/keuangan',    [LaporanKasirController::class, 'keuangan']);
         Route::get('/laporan/operasional', [LaporanKasirController::class, 'operasional']);
     });
 
     /*
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     | PASIEN
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     */
     Route::middleware('role:pasien')->prefix('pasien')->group(function () {
 
@@ -109,20 +145,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dokters', [DokterController::class, 'indexForPasien']);
         Route::get('/dokter/{dokter_id}/jadwal', [JadwalController::class, 'getByDokter']);
 
-        // PENDAFTARAN
         Route::post('/daftar', [PendaftaranController::class, 'store']);
-
-        // 🔥 INI YANG DIPERBAIKI
         Route::get('/appointments', [PendaftaranController::class, 'riwayat']);
-        Route::get('/history', [PendaftaranController::class, 'riwayat']); // alias
-
+        Route::get('/history', [PendaftaranController::class, 'riwayat']);
         Route::get('/antrian', [PendaftaranController::class, 'antrian']);
     });
 
     /*
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     | DOKTER
-    |--------------------------------------------------------------------------
+    |----------------------------------------------------------------------
     */
     Route::middleware('role:dokter')->prefix('dokter')->group(function () {
 
