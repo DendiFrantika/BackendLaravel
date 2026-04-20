@@ -53,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     | ADMIN
     |--------------------------------------------------------------------------
     */
+    Route::middleware(['role:admin'])->get('/laporan/export/pdf', [LaporanController::class, 'exportPDF']);
+
     Route::middleware('role:admin')->prefix('admin')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'admin']);
@@ -69,6 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/rekam-medis', RekamMedisController::class);
 
         Route::get('/laporan/pasien', [LaporanController::class, 'laporanPasien']);
+        Route::get('/laporan/rekam-medis', [LaporanController::class, 'laporanRekamMedis']);
+        Route::get('/laporan/pendaftaran', [LaporanController::class, 'laporanPendaftaran']);
+        Route::get('/laporan/dokter', [LaporanController::class, 'laporanDokter']);
 
         Route::apiResource('/obat', KasirObatController::class);
         Route::apiResource('/tarif-tindakan', KasirTarifTindakanController::class);
@@ -86,11 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/laporan/keuangan', [LaporanKasirController::class, 'keuangan']);
         Route::get('/laporan/operasional', [LaporanKasirController::class, 'operasional']);
-
-        Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::put('/admin/update-profile', [AdminSettingsController::class, 'updateProfile']);
-    Route::put('/admin/update-password', [AdminSettingsController::class, 'updatePassword']);
-});
     });
 
     /*
