@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Pendaftaran;
 use App\Models\Pasien;
+use App\Models\Dokter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -181,4 +182,51 @@ class PendaftaranController extends Controller
             'data' => $antrian,
         ], 200);
     }
+
+    public function antrianDokter(Request $request)
+{
+    $user = $request->user();
+
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
+    $dokter = Dokter::where('email', $user->email)->first();
+
+    if (!$dokter) {
+        return response()->json(['message' => 'Dokter tidak ditemukan'], 404);
+    }
+
+    $antrian = Pendaftaran::where('dokter_id', $dokter->id)
+        ->whereNotIn('status', ['completed', 'cancelled'])
+        ->with(['pasien'])
+        ->orderBy('tanggal_pendaftaran', 'asc')
+        ->get();
+
+    return response()->json([
+        'data' => $antrian
+    ], 200);
+}
+
+    public function updateStatusAntrian(Request $request, $id)
+{
+    $request->validate([
+        'status' => 'required|in:pending,confirmed,checked_in,completed,cancelled'
+    ]);
+
+    $pendaftaran = Pendaftaran::find($id);
+
+    if (!$pendaftaran) {
+        return response()->json(['message' => 'Data tidak ditemukan'], 404);
+    }
+
+    $pendaftaran->update([
+        'status' => $request->status
+    ]);
+
+    return response()->json([
+        'message' => 'Status berhasil diupdate',
+        'data' => $pendaftaran
+    ]);
+}
 }

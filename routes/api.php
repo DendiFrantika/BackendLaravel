@@ -131,6 +131,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:dokter')->prefix('dokter')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'overview']);
+        Route::get('/pasien', [PendaftaranController::class, 'getByDokter']);
+        Route::get('/antrian', [PendaftaranController::class, 'antrianDokter']);
+        Route::put('/antrian/{id}', [PendaftaranController::class, 'updateStatusAntrian']);
+        Route::post('/rekam-medis', [RekamMedisController::class, 'storeFromDokter']);
+        Route::get('/rekam-medis/pendaftaran/{pendaftaran_id}', [RekamMedisController::class, 'showByPendaftaran']);
+        Route::get('/rekam-medis', [RekamMedisController::class, 'getByDokterAuth']);
+        
          Route::get('/dokter/pendaftaran/dokter/${dokterId}', [PendaftaranController::class, 'getByPasien']);
          Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
          Route::put('/dokter/pendaftaran/${id}/status', [PendaftaranController::class, 'updateStatusDokter']);
