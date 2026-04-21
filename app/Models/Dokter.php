@@ -43,4 +43,6 @@ class Dokter extends Model
     {
         return $this->hasMany(RekamMedis::class);
     }
+
+    
 }
