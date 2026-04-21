@@ -269,4 +269,26 @@ public function getByDokterAuth(Request $request)
 
     return response()->json($rekamMedis, 200);
 }
+
+public function riwayatDokter(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = \App\Models\Dokter::where('email', $user->email)->first();
+
+    if (!$dokter) {
+        return response()->json([
+            'message' => 'Dokter tidak ditemukan'
+        ], 404);
+    }
+
+    $riwayat = \App\Models\RekamMedis::with('pasien')
+        ->where('dokter_id', $dokter->id)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'data' => $riwayat
+    ]);
+}
 }

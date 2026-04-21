@@ -7,6 +7,7 @@ use App\Models\Dokter;
 use App\Models\JadwalDokter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 
 class DokterController extends Controller
 {
@@ -224,5 +225,104 @@ class DokterController extends Controller
             'error' => $e->getMessage()
         ], 500);
     }
+}
+
+public function statsDokter(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = Dokter::where('email', $user->email)->first();
+
+    if (!$dokter) {
+        return response()->json(['message' => 'Dokter tidak ditemukan'], 404);
+    }
+
+    $today = now()->toDateString();
+
+    return response()->json([
+        'dokter' => [
+            'id' => $dokter->id,
+            'nama' => $dokter->nama,
+            'email' => $dokter->email,
+            'spesialisasi' => $dokter->spesialisasi ?? '-',
+        ],
+
+        'todayAppointments' => \App\Models\Pendaftaran::where('dokter_id', $dokter->id)
+            ->whereDate('created_at', $today)
+            ->count(),
+
+        'pendingDiagnoses' => \App\Models\Pendaftaran::where('dokter_id', $dokter->id)
+            ->where('status', 'pending')
+            ->count(),
+
+        'completedToday' => \App\Models\RekamMedis::where('dokter_id', $dokter->id)
+            ->whereDate('created_at', $today)
+            ->count(),
+    ]);
+}
+
+public function profile(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = Dokter::where('email', $user->email)->first();
+
+    if (!$dokter) {
+        return response()->json([
+            'message' => 'Dokter tidak ditemukan'
+        ], 404);
+    }
+
+    return response()->json([
+        'data' => $dokter
+    ]);
+}
+
+public function updateProfile(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = Dokter::where('email', $user->email)->firstOrFail();
+
+    $validated = $request->validate([
+        'nama' => 'required|string',
+        'spesialisasi' => 'nullable|string',
+        'no_telepon' => 'nullable|string',
+        'no_identitas' => 'nullable|string',
+        'no_lisensi' => 'nullable|string',
+    ]);
+
+    $dokter->update($validated);
+
+    return response()->json([
+        'message' => 'Profile berhasil diupdate',
+        'data' => $dokter
+    ]);
+}
+
+public function updatePassword(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = Dokter::where('email', $user->email)->firstOrFail();
+
+    $request->validate([
+        'password_lama' => 'required',
+        'password_baru' => 'required|min:6|confirmed',
+    ]);
+
+    if (!Hash::check($request->password_lama, $dokter->password)) {
+        return response()->json([
+            'message' => 'Password lama salah'
+        ], 400);
+    }
+
+    $dokter->update([
+        'password' => Hash::make($request->password_baru)
+    ]);
+
+    return response()->json([
+        'message' => 'Password berhasil diubah'
+    ]);
 }
 }
