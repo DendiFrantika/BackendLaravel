@@ -89,20 +89,83 @@ class DashboardController extends Controller
         ], 200);
     }
 
-    public function aktivitasHariIni()
-    {
-        $pendaftaran = Pendaftaran::whereDate('tanggal_pendaftaran', now())
-            ->orderBy('jam_kunjungan')
-            ->get();
+  public function aktivitasHariIni()
+{
+    // ===== PENDAFTARAN =====
+    $pendaftaran = Pendaftaran::with('pasien')
+        ->whereDate('tanggal_pendaftaran', now())
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => 'pendaftaran-' . $item->id,
+                'type' => 'pendaftaran',
+                'description' => 'Pasien ' . ($item->pasien->nama ?? '-') . ' mendaftar',
+                'created_at' => $item->tanggal_pendaftaran . ' ' . ($item->jam_kunjungan ?? '00:00:00'),
+                'status' => $item->status ?? null,
+            ];
+        });
 
-        $rekamMedis = RekamMedis::whereDate('tanggal_kunjungan', now())
-            ->count();
+    // ===== REKAM MEDIS =====
+    $rekamMedis = RekamMedis::with('pasien')
+        ->whereDate('tanggal_kunjungan', now())
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => 'rekam-' . $item->id,
+                'type' => 'rekam_medis',
+                'description' => 'Rekam medis untuk ' . ($item->pasien->nama ?? '-') . ' dibuat',
+                'created_at' => $item->tanggal_kunjungan,
+            ];
+        });
 
-        return response()->json([
-            'pendaftaran' => $pendaftaran,
-            'rekamMedis' => $rekamMedis,
-        ], 200);
-    }
+    // ===== PASIEN BARU =====
+    $pasienBaru = Pasien::whereDate('created_at', now())
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => 'pasien-' . $item->id,
+                'type' => 'pasien_baru',
+                'description' => 'Pasien baru: ' . $item->nama,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+    // ===== LOGIN USER =====
+    $login = User::whereDate('last_login_at', now())
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => 'login-' . $item->id,
+                'type' => 'login',
+                'description' => $item->name . ' login ke sistem',
+                'created_at' => $item->last_login_at,
+            ];
+        });
+
+    // ===== UPDATE DOKTER =====
+    $dokterUpdate = Dokter::whereDate('updated_at', now())
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => 'dokter-' . $item->id,
+                'type' => 'dokter_update',
+                'description' => 'Data dokter ' . $item->nama . ' diperbarui',
+                'created_at' => $item->updated_at,
+            ];
+        });
+
+    // ===== GABUNGKAN SEMUA =====
+    $activities = collect()
+        ->concat($pendaftaran)
+        ->concat($rekamMedis)
+        ->concat($pasienBaru)
+        ->concat($login)
+        ->concat($dokterUpdate)
+        ->sortByDesc('created_at')
+        ->values();
+
+    return response()->json($activities);
+}
 
     public function admin()
     {
