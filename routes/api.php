@@ -27,7 +27,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
 });
-
+// Taruh di bagian AUTH (PUBLIC), setelah Route::prefix('auth')
+Route::get('/public/dokter', [DokterController::class, 'indexForPasien']);
 /*
 |--------------------------------------------------------------------------
 | PROTECTED (LOGIN REQUIRED)
