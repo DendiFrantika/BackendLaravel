@@ -41,7 +41,7 @@ return [
     |
     */
 
-    'expiration' => config('sanctum.expiration', 60),
+    'expiration' => null,
 
     /*
     |--------------------------------------------------------------------------

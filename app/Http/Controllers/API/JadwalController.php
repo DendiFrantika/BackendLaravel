@@ -7,6 +7,7 @@ use App\Models\JadwalDokter;
 use App\Models\Dokter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class JadwalController extends Controller
 {
@@ -18,24 +19,35 @@ class JadwalController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'dokter_id' => 'required|exists:dokters,id',
-            'hari' => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'jam_mulai' => 'required|date_format:H:i',
-            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
-            'kapasitas' => 'required|integer|min:1',
-        ]);
+       $validator = Validator::make($request->all(), [
+    'dokter_id' => 'required|exists:dokters,id',
+    'hari' => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+    'jam_mulai' => [
+        'required',
+        'date_format:H:i',
+        Rule::unique('jadwal_dokters')
+            ->where(function ($query) use ($request) {
+                return $query->where('dokter_id', $request->dokter_id)
+                             ->where('hari', $request->hari);
+            }),
+    ],
 
-        $jadwal = JadwalDokter::create($request->all());
+    'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
+    'kapasitas' => 'nullable|integer|min:1',
+], [
+    'jam_mulai.unique' => 'Jadwal dokter pada hari dan jam tersebut sudah ada.'
+]);
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
 
-        return response()->json([
-            'message' => 'Jadwal created successfully',
-            'data' => $jadwal->load('dokter'),
-        ], 201);
+    $jadwal = JadwalDokter::create($request->all());
+
+    return response()->json([
+        'message' => 'Jadwal created successfully',
+        'data' => $jadwal->load('dokter'),
+    ], 201);
     }
 
     public function show(JadwalDokter $jadwal)
@@ -50,7 +62,7 @@ class JadwalController extends Controller
         $validator = Validator::make($request->all(), [
             'jam_mulai' => 'sometimes|required|date_format:H:i',
             'jam_selesai' => 'sometimes|required|date_format:H:i',
-            'kapasitas' => 'sometimes|required|integer|min:1',
+            'kapasitas' => 'nullable|integer|min:1',
             'status' => 'sometimes|required|boolean',
         ]);
 
