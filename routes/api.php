@@ -54,9 +54,9 @@ Route::middleware('auth:sanctum')->group(function () {
     | ADMIN SHARED (AUTH REQUIRED, NO ROLE)
     |--------------------------------------------------------------------------
     */
-    Route::prefix('admin')->group(function () {
-        Route::apiResource('/jadwal', JadwalController::class);
-    });
+    // Route::prefix('admin')->group(function () {
+    //     Route::apiResource('/jadwal', JadwalController::class);
+    // });
 
     /*
     |--------------------------------------------------------------------------
@@ -76,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/dokter', DokterController::class);
         Route::apiResource('/pasien', PasienController::class);
         Route::apiResource('/pendaftaran', PendaftaranController::class);
+        Route::apiResource('/jadwal', JadwalController::class);
 
         Route::post('/pendaftaran/{id}/verifikasi', [PendaftaranController::class, 'verifikasi']);
         Route::get('/pendaftaran/pasien/{pasien_id}', [PendaftaranController::class, 'getByPasien']);

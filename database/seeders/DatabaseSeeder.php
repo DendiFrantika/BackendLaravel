@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Pasien;
 use App\Models\Dokter;
 use App\Models\JadwalDokter;
+use Illuminate\Support\Facades\Hash;    
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,7 +20,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@rumahsakit.com'],
             [
                 'name' => 'Admin Rumah Sakit',
-                'password' => 'password123', // ❗ JANGAN bcrypt
+                'password' => Hash::make('password123'), // ❗ JANGAN bcrypt
                 'role' => 'admin',
             ]
         );
@@ -32,7 +33,7 @@ class DatabaseSeeder extends Seeder
                 ['email' => "dokter{$i}@rumahsakit.com"],
                 [
                     'name' => "Dokter {$i}",
-                    'password' => 'password123',
+                    'password' => Hash::make('password123'),
                     'role' => 'dokter',
                 ]
             );
@@ -46,7 +47,7 @@ class DatabaseSeeder extends Seeder
                 ['email' => "pasien{$i}@rumahsakit.com"],
                 [
                     'name' => "Pasien {$i}",
-                    'password' => 'password123',
+                    'password' => Hash::make('password123'),
                     'role' => 'pasien',
                 ]
             );

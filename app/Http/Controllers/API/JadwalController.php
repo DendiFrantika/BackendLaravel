@@ -11,10 +11,12 @@ use Illuminate\Validation\Rule;
 
 class JadwalController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $jadwals = JadwalDokter::with('dokter')->paginate(15);
+        $perPage = min(100, max(1, (int) $request->input('per_page', 15)));
+        $jadwals = JadwalDokter::with('dokter')->paginate($perPage);
         return response()->json($jadwals, 200);
+        
     }
 
     public function store(Request $request)

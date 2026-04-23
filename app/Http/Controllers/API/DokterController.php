@@ -8,6 +8,7 @@ use App\Models\JadwalDokter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class DokterController extends Controller
 {
@@ -68,33 +69,82 @@ class DokterController extends Controller
         return response()->json(['data' => $dokters], 200);
     }
 
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|max:255',
-            'no_identitas' => 'required|string|max:255|unique:dokters,no_identitas',
-            'spesialisasi' => 'required|string|max:255',
-            'no_lisensi' => 'required|string|max:255|unique:dokters,no_lisensi',
-            'no_telepon' => 'required|string|max:50',
-            'email' => 'required|email|max:255|unique:dokters,email',
-            'alamat' => 'required|string|max:2000',
-            'jam_praktek_mulai' => 'required|date_format:H:i',
-            'jam_praktek_selesai' => 'required|date_format:H:i|after:jam_praktek_mulai',
-            'hari_libur' => 'nullable|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'status' => 'required|boolean',
+        public function store(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'nama'               => 'required|string|max:255',
+        'no_identitas'       => 'required|string|max:255|unique:dokters,no_identitas',
+        'spesialisasi'       => 'required|string|max:255',
+        'no_lisensi'         => 'required|string|max:255|unique:dokters,no_lisensi',
+        'no_telepon'         => 'required|string|max:50',
+
+        'email' => [
+            'required',
+            'email',
+            'max:255',
+            'unique:dokters,email',
+            'unique:users,email',
+            function ($attribute, $value, $fail) {
+                $blocked = [
+                    'admin@rumahsakit.com',
+                    'admin@gmail.com',
+                    'test@gmail.com'
+                ];
+
+                if (in_array(strtolower($value), $blocked)) {
+                    $fail('Email tidak boleh menggunakan email default / dummy.');
+                }
+            }
+        ],
+
+        'alamat'             => 'required|string|max:2000',
+        'jam_praktek_mulai'  => 'required|date_format:H:i',
+        'jam_praktek_selesai'=> 'required|date_format:H:i|after:jam_praktek_mulai',
+        'hari_libur'         => 'nullable|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
+        'status'             => 'required|boolean',
+
+        // ✅ WAJIB ISI PASSWORD
+        'password'           => 'required|string|min:6',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $dokter = DB::transaction(function () use ($request) {
+
+        // ✅ WAJIB dari input (tidak ada default)
+        $password = $request->password;
+
+        // 🔐 Simpan user login
+        \App\Models\User::create([
+            'name'     => $request->nama,
+            'email'    => $request->email,
+            'password' => Hash::make($password),
+            'role'     => 'dokter',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        // 👨‍⚕️ Simpan dokter
+        return Dokter::create([
+            'nama'                => $request->nama,
+            'no_identitas'        => $request->no_identitas,
+            'spesialisasi'        => $request->spesialisasi,
+            'no_lisensi'          => $request->no_lisensi,
+            'no_telepon'          => $request->no_telepon,
+            'email'               => $request->email,
+            'alamat'              => $request->alamat,
+            'jam_praktek_mulai'   => $request->jam_praktek_mulai,
+            'jam_praktek_selesai' => $request->jam_praktek_selesai,
+            'hari_libur'          => $request->hari_libur,
+            'status'              => $request->status,
+        ]);
+    });
 
-        $dokter = Dokter::create($validator->validated());
-
-        return response()->json([
-            'message' => 'Dokter created successfully',
-            'data' => $dokter,
-        ], 201);
-    }
+    return response()->json([
+        'message' => 'Dokter berhasil ditambahkan & akun login dibuat.',
+        'data'    => $dokter,
+    ], 201);
+}
 
     public function show(Dokter $dokter)
     {
@@ -300,24 +350,24 @@ public function updateProfile(Request $request)
     ]);
 }
 
-public function updatePassword(Request $request)
+    public function updatePassword(Request $request)
 {
-    $user = $request->user();
-
-    $dokter = Dokter::where('email', $user->email)->firstOrFail();
+    $user = $request->user(); // ← user yang login (dari tabel users)
 
     $request->validate([
         'password_lama' => 'required',
         'password_baru' => 'required|min:6|confirmed',
     ]);
 
-    if (!Hash::check($request->password_lama, $dokter->password)) {
+    // ✅ Cek password di tabel USERS, bukan dokters
+    if (!Hash::check($request->password_lama, $user->password)) {
         return response()->json([
             'message' => 'Password lama salah'
         ], 400);
     }
 
-    $dokter->update([
+    // ✅ Update password di tabel USERS
+    $user->update([
         'password' => Hash::make($request->password_baru)
     ]);
 
