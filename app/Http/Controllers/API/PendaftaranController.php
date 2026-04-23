@@ -11,11 +11,38 @@ use Illuminate\Support\Facades\Validator;
 
 class PendaftaranController extends Controller
 {
-    public function index()
+        public function index(Request $request)
     {
-        $pendaftarans = Pendaftaran::with(['pasien', 'dokter', 'jadwalDokter'])->paginate(15);
+        $query = Pendaftaran::with(['pasien', 'dokter', 'jadwalDokter']);
+
+        // Filter status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter tanggal
+        if ($request->filled('tanggal_pendaftaran')) {
+            $query->whereDate('tanggal_pendaftaran', $request->tanggal_pendaftaran);
+        }
+
+        // Filter pencarian nama pasien / dokter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('pasien', fn($p) => $p->where('nama', 'like', "%{$search}%"))
+                  ->orWhereHas('dokter', fn($d) => $d->where('nama', 'like', "%{$search}%"))
+                  ->orWhere('no_antrian', 'like', "%{$search}%");
+            });
+        }
+
+        $query->orderBy('tanggal_pendaftaran', 'desc')
+              ->orderBy('created_at', 'desc');
+
+        $pendaftarans = $query->paginate(15);
+
         return response()->json($pendaftarans, 200);
     }
+
 
     public function store(Request $request)
     {

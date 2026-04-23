@@ -7,7 +7,9 @@ use App\Models\Pasien;
 use App\Models\Dokter;
 use App\Models\Pendaftaran;
 use App\Models\RekamMedis;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
@@ -20,23 +22,23 @@ class DashboardController extends Controller
         $pendaftaranHariIni = Pendaftaran::whereDate('tanggal_pendaftaran', now())->count();
 
         return response()->json([
-            'totalPasien' => $totalPasien,
-            'totalDokter' => $totalDokter,
-            'totalPendaftaran' => $totalPendaftaran,
+            'totalPasien'        => $totalPasien,
+            'totalDokter'        => $totalDokter,
+            'totalPendaftaran'   => $totalPendaftaran,
             'pendaftaranHariIni' => $pendaftaranHariIni,
         ], 200);
     }
 
     public function statistikPasien()
     {
-        $pasienBaru = Pasien::whereDate('created_at', now())->count();
+        $pasienBaru  = Pasien::whereDate('created_at', now())->count();
         $totalPasien = Pasien::count();
         $pasienAktif = Pendaftaran::where('status', '!=', 'cancelled')
             ->distinct()
             ->count('pasien_id');
 
         return response()->json([
-            'pasienBaru' => $pasienBaru,
+            'pasienBaru'  => $pasienBaru,
             'totalPasien' => $totalPasien,
             'pasienAktif' => $pasienAktif,
         ], 200);
@@ -44,16 +46,16 @@ class DashboardController extends Controller
 
     public function statistikDokter()
     {
-        $totalDokter = Dokter::count();
-        $dokterAktif = Dokter::where('status', true)->count();
+        $totalDokter  = Dokter::count();
+        $dokterAktif  = Dokter::where('status', true)->count();
         $spesialisasi = Dokter::select('spesialisasi')
             ->groupBy('spesialisasi')
             ->with(['jadwalDokter'])
             ->get();
 
         return response()->json([
-            'totalDokter' => $totalDokter,
-            'dokterAktif' => $dokterAktif,
+            'totalDokter'  => $totalDokter,
+            'dokterAktif'  => $dokterAktif,
             'spesialisasi' => $spesialisasi,
         ], 200);
     }
@@ -73,7 +75,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'byStatus' => $byStatus,
-            'hariIni' => $hariIni,
+            'hariIni'  => $hariIni,
         ], 200);
     }
 
@@ -84,131 +86,105 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        return response()->json([
-            'data' => $pendaftarans,
-        ], 200);
+        return response()->json(['data' => $pendaftarans], 200);
     }
 
-  public function aktivitasHariIni()
-{
-    // ===== PENDAFTARAN =====
-    $pendaftaran = Pendaftaran::with('pasien')
-        ->whereDate('tanggal_pendaftaran', now())
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => 'pendaftaran-' . $item->id,
-                'type' => 'pendaftaran',
-                'description' => 'Pasien ' . ($item->pasien->nama ?? '-') . ' mendaftar',
-                'created_at' => $item->tanggal_pendaftaran . ' ' . ($item->jam_kunjungan ?? '00:00:00'),
-                'status' => $item->status ?? null,
-            ];
-        });
+    public function aktivitasHariIni()
+    {
+        $start = now('Asia/Jakarta')->startOfDay()->setTimezone('UTC');
+        $end   = now('Asia/Jakarta')->endOfDay()->setTimezone('UTC');
 
-    // ===== REKAM MEDIS =====
-    $rekamMedis = RekamMedis::with('pasien')
-        ->whereDate('tanggal_kunjungan', now())
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => 'rekam-' . $item->id,
-                'type' => 'rekam_medis',
-                'description' => 'Rekam medis untuk ' . ($item->pasien->nama ?? '-') . ' dibuat',
-                'created_at' => $item->tanggal_kunjungan,
-            ];
-        });
+        $pendaftaranBaru = Pendaftaran::with(['pasien', 'dokter'])
+            ->whereBetween('created_at', [$start, $end])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'type'                => 'pendaftaran_baru',
+                    'description'         => 'Pendaftaran baru oleh ' . ($p->pasien->nama ?? '-') .
+                                             ' ke dr. ' . ($p->dokter->nama ?? '-'),
+                    'tanggal_pendaftaran' => optional($p->tanggal_pendaftaran)->format('Y-m-d'),
+                    'status'              => $p->status,
+                    'created_at'          => $p->created_at,
+                ];
+            });
 
-    // ===== PASIEN BARU =====
-    $pasienBaru = Pasien::whereDate('created_at', now())
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => 'pasien-' . $item->id,
-                'type' => 'pasien_baru',
-                'description' => 'Pasien baru: ' . $item->nama,
-                'created_at' => $item->created_at,
-            ];
-        });
+        $jadwalHariIni = Pendaftaran::with(['pasien', 'dokter'])
+            ->whereBetween('tanggal_pendaftaran', [$start, $end])
+            ->orderBy('jam_kunjungan')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'type'                => 'jadwal_periksa',
+                    'description'         => 'Jadwal periksa ' . ($p->pasien->nama ?? '-') .
+                                             ' ke dr. ' . ($p->dokter->nama ?? '-') .
+                                             ' jam ' . Carbon::parse($p->jam_kunjungan)->format('H:i'),
+                    'tanggal_pendaftaran' => optional($p->tanggal_pendaftaran)->format('Y-m-d'),
+                    'status'              => $p->status,
+                    'created_at'          => $p->created_at,
+                ];
+            });
 
-    // ===== LOGIN USER =====
-    $login = User::whereDate('last_login_at', now())
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => 'login-' . $item->id,
-                'type' => 'login',
-                'description' => $item->name . ' login ke sistem',
-                'created_at' => $item->last_login_at,
-            ];
-        });
+        $rekamMedis = RekamMedis::with(['pasien', 'dokter'])
+            ->whereBetween('created_at', [$start, $end])
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'type'              => 'rekam_medis',
+                    'description'       => 'Rekam medis pasien ' . ($r->pasien->nama ?? '-') .
+                                           ' oleh dr. ' . ($r->dokter->nama ?? '-'),
+                    'tanggal_kunjungan' => optional($r->tanggal_kunjungan)->format('Y-m-d'),
+                    'status'            => null,
+                    'created_at'        => $r->created_at,
+                ];
+            });
 
-    // ===== UPDATE DOKTER =====
-    $dokterUpdate = Dokter::whereDate('updated_at', now())
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => 'dokter-' . $item->id,
-                'type' => 'dokter_update',
-                'description' => 'Data dokter ' . $item->nama . ' diperbarui',
-                'created_at' => $item->updated_at,
-            ];
-        });
+        $all = collect()
+            ->merge($pendaftaranBaru)
+            ->merge($jadwalHariIni)
+            ->merge($rekamMedis)
+            ->sortByDesc('created_at')
+            ->values();
 
-    // ===== GABUNGKAN SEMUA =====
-    $activities = collect()
-        ->concat($pendaftaran)
-        ->concat($rekamMedis)
-        ->concat($pasienBaru)
-        ->concat($login)
-        ->concat($dokterUpdate)
-        ->sortByDesc('created_at')
-        ->values();
-
-    return response()->json($activities);
-}
+        return response()->json($all, 200);
+    }
 
     public function admin()
     {
-        $totalPasien = Pasien::count();
-        $totalDokter = Dokter::where('status', true)->count();
-        $totalPendaftaran = Pendaftaran::count();
+        $totalPasien        = Pasien::count();
+        $totalDokter        = Dokter::where('status', true)->count();
+        $totalPendaftaran   = Pendaftaran::count();
         $pendaftaranHariIni = Pendaftaran::whereDate('tanggal_pendaftaran', now())->count();
         $pendaftaranPending = Pendaftaran::where('status', 'pending')->count();
-
-        // Statistik Pasien
-        $pasienBaru = Pasien::whereDate('created_at', now())->count();
-        $pasienAktif = Pendaftaran::where('status', '!=', 'cancelled')
-            ->distinct()
-            ->count('pasien_id');
-
-        // Statistik Dokter
-        $dokterSeluruh = Dokter::count();
-        $spesialisasi = Dokter::select('spesialisasi', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+        $pasienBaru         = Pasien::whereDate('created_at', now())->count();
+        $pasienAktif        = Pendaftaran::where('status', '!=', 'cancelled')->distinct()->count('pasien_id');
+        $dokterSeluruh      = Dokter::count();
+        $spesialisasi       = Dokter::select('spesialisasi', DB::raw('count(*) as total'))
             ->groupBy('spesialisasi')
             ->get();
 
         return response()->json([
-            'totalPasien' => $totalPasien,
-            'totalDokter' => $totalDokter,
-            'totalPendaftaran' => $totalPendaftaran,
+            'totalPasien'        => $totalPasien,
+            'totalDokter'        => $totalDokter,
+            'totalPendaftaran'   => $totalPendaftaran,
             'pendaftaranHariIni' => $pendaftaranHariIni,
             'pendaftaranPending' => $pendaftaranPending,
-            'statistikPasien' => [
+            'statistikPasien'    => [
                 'pasienBaruHariIni' => $pasienBaru,
-                'pasienAktif' => $pasienAktif,
-                'totalPasien' => $totalPasien,
+                'pasienAktif'       => $pasienAktif,
+                'totalPasien'       => $totalPasien,
             ],
-            'statistikDokter' => [
+            'statistikDokter'    => [
                 'totalDokterSeluruh' => $dokterSeluruh,
-                'dokterAktif' => $totalDokter,
-                'spesialisasi' => $spesialisasi,
-            ]
+                'dokterAktif'        => $totalDokter,
+                'spesialisasi'       => $spesialisasi,
+            ],
         ], 200);
     }
 
     public function pasien(Request $request)
     {
-        $user = $request->user();
+        $user   = $request->user();
         $pasien = Pasien::where('email', $user->email)->first();
 
         if (!$pasien) {
@@ -223,26 +199,169 @@ class DashboardController extends Controller
         $totalKunjungan = RekamMedis::where('pasien_id', $pasien->id)->count();
 
         return response()->json([
-            'pasien' => array_merge($pasien->toArray(), [
+            'pasien'             => array_merge($pasien->toArray(), [
                 'photo_url' => $this->photoUrlForUser($user->id),
             ]),
             'pendaftaranTerbaru' => $pendaftaranTerbaru,
-            'totalKunjungan' => $totalKunjungan,
+            'totalKunjungan'     => $totalKunjungan,
         ], 200);
+    }
+
+    /**
+     * GET /admin/analytics
+     * Kunjungan pasien 7 hari terakhir untuk line chart.
+     *
+     * Response: { chart: [ { hari: 'Sen', tanggal: '2025-04-17', pasien: 5 }, ... ] }
+     */
+    public function analytics()
+    {
+        $days = collect();
+
+        for ($i = 6; $i >= 0; $i--) {
+            $date  = Carbon::now()->subDays($i);
+            $count = Pendaftaran::whereDate('tanggal_pendaftaran', $date->toDateString())->count();
+
+            $days->push([
+                'hari'    => $date->isoFormat('ddd'),
+                'tanggal' => $date->toDateString(),
+                'pasien'  => $count,
+            ]);
+        }
+
+        return response()->json([
+            'chart' => $days->values(),
+        ]);
+    }
+
+    /**
+     * GET /admin/chart-data?range=week|month|year
+     * Data statistik pendaftaran untuk bar chart.
+     *
+     * Response: [ { name: 'Sen', pendaftaran: 5, pasien: 3 }, ... ]
+     */
+    public function chartData(Request $request)
+    {
+        $range = $request->query('range', 'month');
+
+        $data = match ($range) {
+            'week'  => $this->chartDataWeek(),
+            'year'  => $this->chartDataYear(),
+            default => $this->chartDataMonth(),
+        };
+
+        return response()->json($data);
+    }
+
+    /* ── private helpers ─────────────────────────────── */
+
+    private function chartDataWeek(): array
+    {
+        $start = Carbon::now()->startOfWeek();
+        $end   = Carbon::now()->endOfWeek();
+
+        $rows = Pendaftaran::select(
+                DB::raw('DATE(tanggal_pendaftaran) as tgl'),
+                DB::raw('COUNT(*) as total_pendaftaran'),
+                DB::raw('COUNT(DISTINCT pasien_id) as total_pasien')
+            )
+            ->whereBetween('tanggal_pendaftaran', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('tgl')
+            ->orderBy('tgl')
+            ->get()
+            ->keyBy('tgl');
+
+        $result = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date     = $start->copy()->addDays($i);
+            $key      = $date->toDateString();
+            $row      = $rows->get($key);
+            $result[] = [
+                'name'        => $date->isoFormat('ddd'),
+                'pendaftaran' => $row ? (int) $row->total_pendaftaran : 0,
+                'pasien'      => $row ? (int) $row->total_pasien      : 0,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function chartDataMonth(): array
+    {
+        $start = Carbon::now()->startOfMonth();
+        $end   = Carbon::now()->endOfMonth();
+        $weeks = (int) ceil($end->day / 7);
+
+        $rows = Pendaftaran::select(
+                DB::raw('WEEK(tanggal_pendaftaran, 1) as week_num'),
+                DB::raw('COUNT(*) as total_pendaftaran'),
+                DB::raw('COUNT(DISTINCT pasien_id) as total_pasien')
+            )
+            ->whereBetween('tanggal_pendaftaran', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('week_num')
+            ->orderBy('week_num')
+            ->get()
+            ->values();
+
+        return $rows->map(fn ($row, $i) => [
+            'name'        => 'Minggu ke-' . ($i + 1),
+            'pendaftaran' => (int) $row->total_pendaftaran,
+            'pasien'      => (int) $row->total_pasien,
+        ])->toArray() ?: $this->emptyWeeks($weeks);
+    }
+
+    private function chartDataYear(): array
+    {
+        $year = Carbon::now()->year;
+
+        $rows = Pendaftaran::select(
+                DB::raw('MONTH(tanggal_pendaftaran) as bulan'),
+                DB::raw('COUNT(*) as total_pendaftaran'),
+                DB::raw('COUNT(DISTINCT pasien_id) as total_pasien')
+            )
+            ->whereYear('tanggal_pendaftaran', $year)
+            ->groupBy('bulan')
+            ->orderBy('bulan')
+            ->get()
+            ->keyBy('bulan');
+
+        $monthNames = [
+            1 => 'Jan', 2 => 'Feb', 3  => 'Mar', 4  => 'Apr',
+            5 => 'Mei', 6 => 'Jun', 7  => 'Jul', 8  => 'Agu',
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+        ];
+
+        $result = [];
+        foreach ($monthNames as $num => $name) {
+            $row      = $rows->get($num);
+            $result[] = [
+                'name'        => $name,
+                'pendaftaran' => $row ? (int) $row->total_pendaftaran : 0,
+                'pasien'      => $row ? (int) $row->total_pasien      : 0,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function emptyWeeks(int $n): array
+    {
+        return array_map(fn ($i) => [
+            'name'        => "Minggu ke-$i",
+            'pendaftaran' => 0,
+            'pasien'      => 0,
+        ], range(1, $n));
     }
 
     private function photoUrlForUser(int $userId): ?string
     {
         $dir = public_path('assets/profile');
-        if (! File::isDirectory($dir)) {
+
+        if (!File::isDirectory($dir)) {
             return null;
         }
 
         $matches = File::glob($dir . DIRECTORY_SEPARATOR . 'user-' . $userId . '.*');
-        if (! $matches) {
-            return null;
-        }
 
-        return asset('assets/profile/' . basename($matches[0]));
+        return $matches ? asset('assets/profile/' . basename($matches[0])) : null;
     }
 }

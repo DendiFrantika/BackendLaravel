@@ -8,7 +8,6 @@ use App\Http\Controllers\API\PendaftaranController;
 use App\Http\Controllers\API\RekamMedisController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LaporanController;
-use App\Http\Controllers\API\AnalyticsController;
 
 use App\Http\Controllers\API\Kasir\ObatController as KasirObatController;
 use App\Http\Controllers\API\Kasir\PendaftaranFlowController as KasirPendaftaranFlowController;
@@ -52,6 +51,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | ADMIN SHARED (AUTH REQUIRED, NO ROLE)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin')->group(function () {
+        Route::apiResource('/jadwal', JadwalController::class);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | ADMIN
     |--------------------------------------------------------------------------
     */
@@ -63,9 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/recent-activities',   [DashboardController::class, 'recentActivities']);
         Route::get('/chart-data',          [DashboardController::class, 'chartData']);
         Route::get('/aktivitas-hari-ini',  [DashboardController::class, 'aktivitasHariIni']);
+         Route::get('/analytics',           [DashboardController::class, 'analytics']);
 
         Route::apiResource('/dokter', DokterController::class);
-        Route::apiResource('/jadwal', JadwalController::class);
         Route::apiResource('/pasien', PasienController::class);
         Route::apiResource('/pendaftaran', PendaftaranController::class);
 
@@ -140,7 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/rekam-medis', [RekamMedisController::class, 'storeFromDokter']);
         Route::get('/rekam-medis/pendaftaran/{pendaftaran_id}', [RekamMedisController::class, 'showByPendaftaran']);
         Route::get('/rekam-medis', [RekamMedisController::class, 'getByDokterAuth']);
-        
+
          Route::get('/dokter/pendaftaran/dokter/${dokterId}', [PendaftaranController::class, 'getByPasien']);
          Route::get('/pendaftaran/dokter/{dokter_id}', [PendaftaranController::class, 'getByDokter']);
          Route::put('/dokter/pendaftaran/${id}/status', [PendaftaranController::class, 'updateStatusDokter']);
