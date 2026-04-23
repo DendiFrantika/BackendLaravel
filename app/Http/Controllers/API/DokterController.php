@@ -104,7 +104,7 @@ class DokterController extends Controller
         'status'             => 'required|boolean',
 
         // ✅ WAJIB ISI PASSWORD
-        'password'           => 'required|string|min:6',
+        'password' => 'nullable|string|min:6',
     ]);
 
     if ($validator->fails()) {
@@ -114,7 +114,7 @@ class DokterController extends Controller
     $dokter = DB::transaction(function () use ($request) {
 
         // ✅ WAJIB dari input (tidak ada default)
-        $password = $request->password;
+       $password = $request->password ?? 'password123';
 
         // 🔐 Simpan user login
         \App\Models\User::create([
@@ -373,6 +373,61 @@ public function updateProfile(Request $request)
 
     return response()->json([
         'message' => 'Password berhasil diubah'
+    ]);
+}
+public function aktivitasHariIni(Request $request)
+{
+    $user = $request->user();
+
+    $dokter = Dokter::where('email', $user->email)->first();
+
+    if (!$dokter) {
+        return response()->json(['message' => 'Dokter tidak ditemukan'], 404);
+    }
+
+    $today = now()->toDateString();
+
+    // 🔹 Ambil data pendaftaran hari ini
+   $pendaftaran = \App\Models\Pendaftaran::with('pasien')
+    ->where('dokter_id', $dokter->id)
+    ->latest()
+    ->limit(5)
+    ->get();
+    $aktivitas = [];
+
+    foreach ($pendaftaran as $item) {
+        $aktivitas[] = [
+            'time' => $item->created_at->format('H:i'),
+            'desc' => 'Pasien: ' . ($item->pasien->nama ?? '-') . ' - Pemeriksaan'
+        ];
+    }
+
+    // 🔹 Tambahan: pending diagnosis
+    $pending = \App\Models\Pendaftaran::where('dokter_id', $dokter->id)
+        ->where('status', 'pending')
+        ->count();
+
+    if ($pending > 0) {
+        $aktivitas[] = [
+            'time' => now()->format('H:i'),
+            'desc' => "Diagnosis pending: $pending pasien menunggu"
+        ];
+    }
+
+    // 🔹 Tambahan: rekam medis hari ini
+    $rekam = \App\Models\RekamMedis::where('dokter_id', $dokter->id)
+        ->whereDate('created_at', $today)
+        ->count();
+
+    if ($rekam > 0) {
+        $aktivitas[] = [
+            'time' => now()->format('H:i'),
+            'desc' => "Rekam medis hari ini: $rekam entri"
+        ];
+    }
+
+    return response()->json([
+        'data' => $aktivitas
     ]);
 }
 }

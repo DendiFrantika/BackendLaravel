@@ -156,5 +156,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/jadwal', [JadwalController::class, 'getJadwalByLogin']);
         Route::get('/riwayat', [RekamMedisController::class, 'riwayatDokter']);
         Route::get('/stats', [DokterController::class, 'statsDokter']);
+         Route::get('/dokter/aktivitas-hari-ini', [DokterController::class, 'aktivitasHariIni']);
     });
 });
