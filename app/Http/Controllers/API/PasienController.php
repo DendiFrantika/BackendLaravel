@@ -35,9 +35,7 @@ class PasienController extends Controller
         if ($request->filled('jenis_kelamin')) {
             $query->where('jenis_kelamin', $request->input('jenis_kelamin'));
         }
-if ($request->golongan_darah) {
-    $query->where('golongan_darah', $request->golongan_darah);
-}
+
         $perPage = min(100, max(1, (int) $request->input('per_page', 15)));
         return response()->json($query->paginate($perPage), 200);
     }
